@@ -21,49 +21,48 @@ using namespace glm;
 #include <vector>
 #include <memory>
 #include <glm/gtc/type_ptr.hpp>
+#include <iostream>
+
+
+std::ostream& operator << (std::ostream& os, const glm::uvec4 & v){
+	os << v.x << " " << v.y << " " << v.z << " " << v.w;
+	return os;
+}
 
 class Grid
 {
 	GLuint vao;
-	int slices = 10;
 	GLuint vbo;
 	GLuint ibo;
+	int slices = 10;
 	int lenght;
 
 public:
 
 	Grid()
 	{
-
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
+
+//		GLuint programID = LoadShaders(
+//				"TransformVertexShader.vertexshader",
+//				"SimpleFragmentShader.fragmentshader"
+//				);
 
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::uvec4> indices;
 
-		bool is_horizontal_grid = true;
-
-		if (is_horizontal_grid){
-
-			for(int j = 0; j <= slices; ++j) {
-				for(int i = 0; i <= slices; ++i) {
-					float x = (float) i / (float) slices;
-					float y = 0;
-					float z = (float) j / (float) slices;
-					vertices.push_back(glm::vec3(x, y, z));
-				}
-			}
-		} else {
-			for(int j = 0; j <= slices; ++j) {
-				for(int i = 0; i <= slices; ++i) {
-					float x = (float) i / (float) slices;
-					float z = 0;
-					float y = (float) j / (float)slices;
-					vertices.push_back(glm::vec3(x, y, z));
-				}
+		for(int j = 0; j <= slices; ++j) {
+			for(int i = 0; i <= slices; ++i) {
+				float x = (float) i / (float) slices;
+				float y = 0;
+				float z = (float) j / (float) slices;
+				vertices.push_back(glm::vec3(x, y, z));
 			}
 		}
 
+
+		// Add the line segments
 		for(int j = 0; j < slices; ++j) {
 			for(int i = 0; i < slices; ++i) {
 
@@ -75,25 +74,32 @@ public:
 						row1 + i + 1,
 						row1 + i + 1,
 						row2 + i + 1
-				));
+						));
+
+//				std::cout << indices.back() << std::endl;
+
 				indices.push_back(glm::uvec4(
 						row2 + i + 1,
 						row2 + i,
 						row2 + i,
-						row1 + i));
+						row1 + i
+						));
+
+//				std::cout << indices.back() << std::endl;
+//				std::cout << std::endl;
 			}
 		}
 
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 
-
 		glGenBuffers(1, &vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), glm::value_ptr(vertices[0]), GL_STATIC_DRAW);
-		glEnableVertexAttribArray( 0 );
-		glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, nullptr );
 
+		// Take care of the changed type when you create and initialize the data store of the buffer:
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), glm::value_ptr(vertices[0]), GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
 		glGenBuffers(1, &ibo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
@@ -103,11 +109,13 @@ public:
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+		// Finally calculate the proper number of indices
 		lenght = (GLuint)indices.size() * 4;
 	}
 
 	void draw()
 	{
+		// render the grid:
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
 		glEnable(GL_DEPTH_TEST);
@@ -124,12 +132,12 @@ public:
 	~Grid()
 	{
 		glDeleteBuffers(1, &vbo);
-//	glDeleteBuffers(1, &uvbuffer);
-
-//	glDeleteTextures(1, &TextureID);
+		glDeleteBuffers(1, &ibo);
 		glDeleteVertexArrays(1, &vao);
 	}
 };
+
+
 
 int main( void )
 {
@@ -148,7 +156,7 @@ int main( void )
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow(1024, 768, "Tutorial 0 - Keyboard and Mouse", NULL, NULL);
+	window = glfwCreateWindow( 1024, 768, "Tutorial 0 - Keyboard and Mouse", NULL, NULL);
 	if( window == NULL ){
 		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
 		getchar();
@@ -168,7 +176,7 @@ int main( void )
 
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-	// Hide the mouse and enable unlimited movement
+	// Hide the mouse and enable unlimited mouvement
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// Set the mouse at the center of the screen
@@ -191,7 +199,7 @@ int main( void )
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders(
 			"TransformVertexShader.vertexshader",
-			"TextureFragmentShader.fragmentshader"
+			"SimpleFragmentShader.fragmentshader"
 			);
 
 	// Get a handle for our "MVP" uniform
