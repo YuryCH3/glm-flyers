@@ -158,7 +158,9 @@ public:
 		// Compute the MVP matrix from keyboard and mouse input
 		computeMatricesFromInputs();
 
-		if (horizontal){
+		bool locked_view = false;
+
+		if (locked_view){
 			glm::mat4 ProjectionMatrix = getProjectionMatrix();
 			glm::mat4 ViewMatrix = getViewMatrix();
 			glm::mat4 ModelMatrix = glm::mat4(1.0);
@@ -192,6 +194,175 @@ public:
 	{
 		glDeleteBuffers(1, &vbo);
 		glDeleteBuffers(1, &ibo);
+		glDeleteVertexArrays(1, &vao);
+		glDeleteProgram(programID);
+	}
+};
+
+class Ship
+{
+	GLuint vao;
+	GLuint vertexbuffer;
+
+	GLuint programID;
+	GLuint MatrixID;
+
+public:
+
+	Ship(bool red = true)
+	{
+		if (!red){
+			programID = LoadShaders(
+					"TransformVertexShader.vertexshader",
+					"SimpleFragmentShader.fragmentshader"
+			);
+		} else {
+			programID = LoadShaders(
+					"TransformVertexShader.vertexshader",
+					"SimpleFragmentShaderRed.fragmentshader"
+			);
+		}
+
+		// Get a handle for our "MVP" uniform
+		MatrixID = glGetUniformLocation(programID, "MVP");
+
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+
+//		GLuint programID = LoadShaders(
+//				"TransformVertexShader.vertexshader",
+//				"SimpleFragmentShader.fragmentshader"
+//				);
+
+		// 4 triangles
+		// 5 unique vertices
+		// 4 * 3 indices
+
+		static const GLfloat g_vertex_buffer_data[] {
+				0.f, 0.f, 2.f,
+				-1.f, 0.f, 0.f,
+				1.f, 0.f, 0.f,
+
+				0.f, 0.f, 2.f,
+				-1.f, 1.f, 0.f,
+				1.f, 1.f, 0.f,
+
+				0.f, 0.f, 2.f,
+				-1.f, 0.f, 0.f,
+				-1.f, 1.f, 0.f,
+
+				0.f, 0.f, 2.f,
+				1.f, 0.f, 0.f,
+				1.f, 1.f, 0.f,
+		};
+
+
+// This will identify our vertex buffer
+		GLuint vertexbuffer;
+// Generate 1 buffer, put the resulting identifier in vertexbuffer
+		glGenBuffers(1, &vertexbuffer);
+// The following commands will talk about our 'vertexbuffer' buffer
+		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+// Give our vertices to OpenGL.
+		glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+		// Finally calculate the proper number of indices
+
+		glBindVertexArray(0);
+	}
+
+	void draw()
+	{
+
+
+		// Use our shader
+		glUseProgram(programID);
+
+		// Compute the MVP matrix from keyboard and mouse input
+		computeMatricesFromInputs();
+
+
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glDisable(GL_DEPTH_TEST);
+
+		glBindVertexArray(vao);
+
+//		bool locked_view = true;
+		bool locked_view = false;
+
+		if (locked_view){
+			glm::mat4 CameraMatrix = glm::lookAt(
+					glm::vec3(0,1,-5), // the position of your camera, in world space
+					glm::vec3(0,0,0),   // where you want to look at, in world space
+					glm::vec3(0,1,0)        // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
+			);
+
+			glm::mat4 ProjectionMatrix = getProjectionMatrix();
+			glm::mat4 ViewMatrix = getViewMatrix();
+			glm::mat4 ModelMatrix = glm::mat4(1.0);
+			glm::mat4 MVP = ProjectionMatrix * CameraMatrix * ModelMatrix;
+			//		// Send our transformation to the currently bound shader,
+			//		// in the "MVP" uniform
+			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
+		} else {
+			glm::mat4 ProjectionMatrix = getProjectionMatrix();
+			glm::mat4 ViewMatrix = getViewMatrix();
+			glm::mat4 ModelMatrix = glm::mat4(1.0);
+			glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+			//		// Send our transformation to the currently bound shader,
+			//		// in the "MVP" uniform
+			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
+		}
+
+//		glm::mat4 ProjectionMatrix = getProjectionMatrix();
+//		glm::mat4 ViewMatrix = getViewMatrix();
+//		glm::mat4 ModelMatrix = glm::mat4(1.0);
+//		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+//
+//		// Send our transformation to the currently bound shader,
+//		// in the "MVP" uniform
+//		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
+
+		// Bind our texture in Texture Unit 0
+//		glActiveTexture(GL_TEXTURE0);
+//		glBindTexture(GL_TEXTURE_2D, Texture);
+		// Set our "myTextureSampler" sampler to use Texture Unit 0
+//		glUniform1i(TextureID, 0);
+
+		// 1rst attribute buffer : vertices
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+		glVertexAttribPointer(
+				0,                  // attribute. No particular reason for 0, but must match the layout in the shader.
+				3,                  // size
+				GL_FLOAT,           // type
+				GL_FALSE,           // normalized?
+				0,                  // stride
+				(void*)0            // array buffer offset
+		);
+
+		// 2nd attribute buffer : UVs
+//		glEnableVertexAttribArray(1);
+////		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+//		glVertexAttribPointer(
+//				1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+//				2,                                // size : U+V => 2
+//				GL_FLOAT,                         // type
+//				GL_FALSE,                         // normalized?
+//				0,                                // stride
+//				(void*)0                          // array buffer offset
+//		);
+
+		// Draw the triangle !
+		glDrawArrays(GL_TRIANGLES, 0, 4 * 3 * 3); // 12*3 indices starting at 0 -> 12 triangles
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+	}
+
+	~Ship()
+	{
+		glDeleteBuffers(1, &vertexbuffer);
 		glDeleteVertexArrays(1, &vao);
 		glDeleteProgram(programID);
 	}
@@ -445,10 +616,12 @@ int main(void)
 	glDepthFunc(GL_LESS);
 
 	// Cull triangles which normal is not towards the camera
-	glEnable(GL_CULL_FACE);
+//	glEnable(GL_CULL_FACE);
+//	glEnable(GL_CULL_FACE);
 
 //	std::unique_ptr<NumberCube> cube = std::make_unique<NumberCube>();
 	std::unique_ptr<Grid> grid = std::make_unique<Grid>();
+	std::unique_ptr<Ship> ship = std::make_unique<Ship>();
 //	std::unique_ptr<Grid> grid2 = std::make_unique<Grid>(false);
 
 	do{
@@ -456,6 +629,7 @@ int main(void)
 
 //		cube->draw();
 		grid->draw();
+		ship->draw();
 //		grid2->draw();
 //		glEnable(GL_DEPTH_TEST);
 
