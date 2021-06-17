@@ -228,21 +228,16 @@ class Ship
 
 	const double delta_theta;
 
+	GLuint colorbuffer;
+
 public:
 
-	Ship(bool red, double delta_theta_) : delta_theta(delta_theta_)
+	Ship(glm::vec3 color, double delta_theta_) : delta_theta(delta_theta_)
 	{
-		if (!red){
-			programID = LoadShaders(
-					"TransformVertexShader.vertexshader",
-					"SimpleFragmentShaderYellow.fragmentshader"
-			);
-		} else {
-			programID = LoadShaders(
-					"TransformVertexShader.vertexshader",
-					"SimpleFragmentShaderRed.fragmentshader"
-			);
-		}
+		programID = LoadShaders(
+				"TransformVertexShader.vertexshader",
+				"ColorFragmentShader.fragmentshader"
+		);
 
 		// Get a handle for our "MVP" uniform
 		MatrixID = glGetUniformLocation(programID, "MVP");
@@ -277,9 +272,27 @@ public:
 				1.f, 1.f, -2.f,
 		};
 
+		const GLfloat g_color_buffer_data[] = {
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+				color[0], color[1], color[2],
+		};
+
 
 // This will identify our vertex buffer
-		GLuint vertexbuffer;
+//		GLuint vertexbuffer;
 // Generate 1 buffer, put the resulting identifier in vertexbuffer
 		glGenBuffers(1, &vertexbuffer);
 // The following commands will talk about our 'vertexbuffer' buffer
@@ -287,6 +300,10 @@ public:
 // Give our vertices to OpenGL.
 		glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 		// Finally calculate the proper number of indices
+
+		glGenBuffers(1, &colorbuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
 
 		glBindVertexArray(0);
 	}
@@ -416,6 +433,18 @@ public:
 				GL_FALSE,           // normalized?
 				0,                  // stride
 				(void*)0            // array buffer offset
+		);
+
+		// 2nd attribute buffer : colors
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+		glVertexAttribPointer(
+				1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+				3,                                // size
+				GL_FLOAT,                         // type
+				GL_FALSE,                         // normalized?
+				0,                                // stride
+				(void*)0                          // array buffer offset
 		);
 
 		// 2nd attribute buffer : UVs
@@ -697,8 +726,8 @@ int main(void)
 //	glEnable(GL_CULL_FACE);
 
 	std::unique_ptr<Grid> grid = std::make_unique<Grid>();
-	std::unique_ptr<Ship> ship1 = std::make_unique<Ship>(true, 0);
-	std::unique_ptr<Ship> ship2 = std::make_unique<Ship>(false, M_PI / 4);
+	std::unique_ptr<Ship> ship1 = std::make_unique<Ship>(glm::vec3{1, 0, 0}, 0);
+	std::unique_ptr<Ship> ship2 = std::make_unique<Ship>(glm::vec3{1, 1, 0}, M_PI / 4);
 
 	do{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
