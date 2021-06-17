@@ -61,10 +61,6 @@ public:
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 
-//		GLuint programID = LoadShaders(
-//				"TransformVertexShader.vertexshader",
-//				"SimpleFragmentShader.fragmentshader"
-//				);
 
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::uvec4> indices;
@@ -104,16 +100,16 @@ public:
 						row2 + i + 1
 						));
 
-//				std::cout << indices.back() << std::endl;
-
 				indices.push_back(glm::uvec4(
 						row2 + i + 1,
 						row2 + i,
 						row2 + i,
 						row1 + i
 						));
+			}
+		}
 
-//				std::cout << indices.back() << std::endl;
+
 
 		std::vector<glm::vec3> colors;
 
@@ -162,45 +158,36 @@ public:
 		// Compute the MVP matrix from keyboard and mouse input
 		computeMatricesFromInputs();
 
-		bool locked_view = false;
-
 		double scale_factor = 10;
 
-		if (locked_view){
-			glm::mat4 ProjectionMatrix = getProjectionMatrix();
-			glm::mat4 ViewMatrix = getViewMatrix();
-			glm::mat4 ModelMatrix = glm::mat4(1.0);
-			glm::mat4 MVP = ProjectionMatrix * CameraMatrix * ModelMatrix;
-			//		// Send our transformation to the currently bound shader,
-			//		// in the "MVP" uniform
-			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-		} else {
-			glm::mat4 ProjectionMatrix = getProjectionMatrix();
-			glm::mat4 ViewMatrix = getViewMatrix();
+		glm::mat4 ProjectionMatrix = getProjectionMatrix();
+		glm::mat4 ViewMatrix = getViewMatrix();
 
 //			First let's store our scale in a 3d vector:
-			glm::vec3 scale = glm::vec3(scale_factor, scale_factor, scale_factor);
+		glm::vec3 scale = glm::vec3(scale_factor, scale_factor, scale_factor);
 
 //			Now we need a basic model matrix with no transformations:
-			glm::mat4 ModelMatrix = glm::mat4(1.0);
+		glm::mat4 ModelMatrix = glm::mat4(1.0);
 
-			glm::mat4 TranslationMatrix = translate(mat4(), glm::vec3(-5.f, 0.0f, -5.f));
+		glm::mat4 TranslationMatrix = translate(mat4(), glm::vec3(-5.f, 0.0f, -5.f));
 
-			ModelMatrix = TranslationMatrix * ModelMatrix;
+		ModelMatrix = TranslationMatrix * ModelMatrix;
 
 //			Now we can apply the scale to our model matrix:
-			ModelMatrix = glm::scale(ModelMatrix, scale);
+		ModelMatrix = glm::scale(ModelMatrix, scale);
 
 
-			glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-			//		// Send our transformation to the currently bound shader,
-			//		// in the "MVP" uniform
-			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-		}
+		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+		//		// Send our transformation to the currently bound shader,
+		//		// in the "MVP" uniform
+		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 //
 //		// render the grid:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 //
+
+
+
 		glEnable(GL_DEPTH_TEST);
 //
 		glBindVertexArray(vao);
@@ -249,8 +236,8 @@ public:
 	Ship(glm::vec3 color, double delta_theta_) : delta_theta(delta_theta_)
 	{
 		programID = LoadShaders(
-				"TransformVertexShader.vertexshader",
-				"ColorFragmentShader.fragmentshader"
+			"TransformVertexShader.vertexshader",
+			"ColorFragmentShader.fragmentshader"
 		);
 
 		// Get a handle for our "MVP" uniform
@@ -258,11 +245,6 @@ public:
 
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-
-//		GLuint programID = LoadShaders(
-//				"TransformVertexShader.vertexshader",
-//				"SimpleFragmentShader.fragmentshader"
-//				);
 
 		// 4 triangles
 		// 5 unique vertices
@@ -333,7 +315,6 @@ public:
 
 		double x = r * cos(theta);
 		double y = r * sin(theta) / 3;
-//		double y = 0;
 		double z = r * sin(theta);
 
 		return glm::vec3{x, y, z};
@@ -360,82 +341,41 @@ public:
 
 		glBindVertexArray(vao);
 
-//		bool locked_view = true;
-		bool locked_view = false;
-
 //		double scale_factor = 0.01;
 		double scale_factor = 0.5;
 
 		glm::vec3 curr_pos = calc_position(std::chrono::system_clock::now());
 
-		glm::vec3 dr = curr_pos - prev_pos;
-
-		if (locked_view){
-			glm::mat4 CameraMatrix = glm::lookAt(
-					glm::vec3(0,1,-5), // the position of your camera, in world space
-					glm::vec3(0,0,0),   // where you want to look at, in world space
-					glm::vec3(0,1,0)        // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
-			);
-
-			glm::mat4 ProjectionMatrix = getProjectionMatrix();
-			glm::mat4 ViewMatrix = getViewMatrix();
-			glm::mat4 ModelMatrix = glm::mat4(1.0);
-			glm::mat4 MVP = ProjectionMatrix * CameraMatrix * ModelMatrix;
-			//		// Send our transformation to the currently bound shader,
-			//		// in the "MVP" uniform
-			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-		} else {
-			glm::mat4 ProjectionMatrix = getProjectionMatrix();
-			glm::mat4 ViewMatrix = getViewMatrix();
+		glm::mat4 ProjectionMatrix = getProjectionMatrix();
+		glm::mat4 ViewMatrix = getViewMatrix();
 
 //			Now we need a basic model matrix with no transformations:
-			glm::mat4 ModelMatrix = glm::mat4(1.0);
+		glm::mat4 ModelMatrix = glm::mat4(1.0);
 
-			// scale model
+		// scale model
 //			First let's store our scale in a 3d vector:
-			glm::vec3 scale = glm::vec3(scale_factor, scale_factor, scale_factor);
+		glm::vec3 scale = glm::vec3(scale_factor, scale_factor, scale_factor);
 //			Now we can apply the scale to our model matrix:
-			ModelMatrix = glm::scale(ModelMatrix, scale);
+		ModelMatrix = glm::scale(ModelMatrix, scale);
 
-			// rotate model
-			auto angle_in_radians = float(calc_turn_angle(prev_pos, curr_pos));
-			ModelMatrix = glm::rotate(ModelMatrix, angle_in_radians, glm::vec3 (0, 1, 0)); // where x, y, z is axis of rotation (e.g. 0 1 0)
+		// rotate model
+		auto angle_in_radians = float(calc_turn_angle(prev_pos, curr_pos));
+		ModelMatrix = glm::rotate(ModelMatrix, angle_in_radians, glm::vec3 (0, 1, 0)); // where x, y, z is axis of rotation (e.g. 0 1 0)
 
-			// translate model
-			glm::mat4 TranslationMatrix = translate(mat4(), curr_pos);
-			ModelMatrix = TranslationMatrix * ModelMatrix;
+		// translate model
+		glm::mat4 TranslationMatrix = translate(mat4(), curr_pos);
+		ModelMatrix = TranslationMatrix * ModelMatrix;
 
-			// rotate orbit
-//			ModelMatrix = glm::rotate(ModelMatrix, M_PI_4f32, glm::vec3 (1, 0, 0)); // where x, y, z is axis of rotation (e.g. 0 1 0)
+		// translate orbit
+		ModelMatrix = translate(mat4(), glm::vec3(0, 3, 0)) * ModelMatrix;
 
-			// translate orbit
-			ModelMatrix = translate(mat4(), glm::vec3(0, 3, 0)) * ModelMatrix;
-
-			// rotate orbit
-//			ModelMatrix = glm::rotate(ModelMatrix, M_PI_4f32, glm::vec3 (0, 1, 0)); // where x, y, z is axis of rotation (e.g. 0 1 0)
-
-			glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-			//		// Send our transformation to the currently bound shader,
-			//		// in the "MVP" uniform
-			glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-		}
+		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+		//		// Send our transformation to the currently bound shader,
+		//		// in the "MVP" uniform
+		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 
 		prev_pos = curr_pos;
 
-//		glm::mat4 ProjectionMatrix = getProjectionMatrix();
-//		glm::mat4 ViewMatrix = getViewMatrix();
-//		glm::mat4 ModelMatrix = glm::mat4(1.0);
-//		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-//
-//		// Send our transformation to the currently bound shader,
-//		// in the "MVP" uniform
-//		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-		// Bind our texture in Texture Unit 0
-//		glActiveTexture(GL_TEXTURE0);
-//		glBindTexture(GL_TEXTURE_2D, Texture);
-		// Set our "myTextureSampler" sampler to use Texture Unit 0
-//		glUniform1i(TextureID, 0);
 
 		// 1rst attribute buffer : vertices
 		glEnableVertexAttribArray(0);
@@ -460,18 +400,6 @@ public:
 				0,                                // stride
 				(void*)0                          // array buffer offset
 		);
-
-		// 2nd attribute buffer : UVs
-//		glEnableVertexAttribArray(1);
-////		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-//		glVertexAttribPointer(
-//				1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
-//				2,                                // size : U+V => 2
-//				GL_FLOAT,                         // type
-//				GL_FALSE,                         // normalized?
-//				0,                                // stride
-//				(void*)0                          // array buffer offset
-//		);
 
 		// Draw the triangle !
 		glDrawArrays(GL_TRIANGLES, 0, 4 * 3 * 3); // 12*3 indices starting at 0 -> 12 triangles
@@ -736,8 +664,6 @@ int main(void)
 	glDepthFunc(GL_LESS);
 
 	// Cull triangles which normal is not towards the camera
-//	glEnable(GL_CULL_FACE);
-//	glEnable(GL_CULL_FACE);
 
 	std::unique_ptr<Grid> grid = std::make_unique<Grid>();
 	std::unique_ptr<Ship> ship1 = std::make_unique<Ship>(glm::vec3{1, 0, 0}, 0);
@@ -746,12 +672,9 @@ int main(void)
 	do{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-//		cube->draw();
 		grid->draw();
 		ship1->draw();
 		ship2->draw();
-//		grid2->draw();
-//		glEnable(GL_DEPTH_TEST);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
