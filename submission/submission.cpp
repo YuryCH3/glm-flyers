@@ -37,6 +37,7 @@ class Grid
 	GLuint vao;
 	GLuint vbo;
 	GLuint ibo;
+	GLuint colorbuffer;
 	int slices = 10;
 	int lenght;
 
@@ -49,17 +50,10 @@ public:
 
 	Grid(bool horizontal_ = true) : horizontal(horizontal_)
 	{
-		if (horizontal){
-			programID = LoadShaders(
-					"TransformVertexShader.vertexshader",
-					"SimpleFragmentShader.fragmentshader"
-			);
-		} else {
-			programID = LoadShaders(
-					"TransformVertexShader.vertexshader",
-					"SimpleFragmentShaderRed.fragmentshader"
-			);
-		}
+		programID = LoadShaders(
+				"TransformVertexShader.vertexshader",
+				"ColorFragmentShader.fragmentshader"
+		);
 
 		// Get a handle for our "MVP" uniform
 		MatrixID = glGetUniformLocation(programID, "MVP");
@@ -120,9 +114,16 @@ public:
 						));
 
 //				std::cout << indices.back() << std::endl;
-//				std::cout << std::endl;
-			}
+
+		std::vector<glm::vec3> colors;
+
+		for (int i = 0; i < vertices.size(); ++i){
+			colors.push_back(glm::vec3(0, 1, 0));
 		}
+
+		glGenBuffers(1, &colorbuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+		glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(glm::vec3), glm::value_ptr(colors[0]), GL_STATIC_DRAW);
 
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
@@ -203,6 +204,19 @@ public:
 		glEnable(GL_DEPTH_TEST);
 //
 		glBindVertexArray(vao);
+
+		// 2nd attribute buffer : colors
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+		glVertexAttribPointer(
+				1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+				3,                                // size
+				GL_FLOAT,                         // type
+				GL_FALSE,                         // normalized?
+				0,                                // stride
+				(void*)0                          // array buffer offset
+		);
+
 		glDrawElements(GL_LINES, lenght, GL_UNSIGNED_INT, NULL);
 		glBindVertexArray(0);
 //////
