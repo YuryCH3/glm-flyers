@@ -302,18 +302,33 @@ public:
 		double theta = 2 * M_PI * t / T + delta_theta;// angle
 
 		double x = r * cos(theta);
-		double y = r * sin(theta) / 3;
+//		double y = r * sin(theta) / 3;
+		double y = 0;
 		double z = r * sin(theta);
 
-		return glm::vec3{x, y, z};
+
+		// rotate around X
+//		double alpha = M_PI_4 / 2;
+		double alpha = M_PI_4;
+
+		glm::mat3 rotation = {
+				{1, 0, 0},
+				{0, cos(alpha), -sin(alpha)},
+				{0, sin(alpha), cos(alpha)},
+		};
+
+		return rotation * glm::vec3{x, y, z};
 	}
 
 
 	glm::vec3 prev_pos = calc_position(std::chrono::system_clock::now());
 
-	double calc_turn_angle(const glm::vec3 & r1, const glm::vec3 & r2){
-		auto dr = r2 - r1;
-		return atan2(dr.x, dr.z);
+	double calc_angle(const glm::vec3 & r1, const glm::vec3 & r2){
+		return acos(glm::dot(glm::normalize(r1), glm::normalize(r2)));
+	}
+
+	glm::vec3 calc_axis(const glm::vec3 & r1, const glm::vec3 & r2){
+		return glm::cross(r1, r2);
 	}
 
 	void draw(const glm::mat4 & ViewMatrix)
@@ -666,6 +681,8 @@ int main(void)
 			glm::vec3(0,1,0)        // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
 	);
 
+	bool export_to_opencv = false;
+
 	do{
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -680,15 +697,16 @@ int main(void)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
-		unsigned char* buffer = new unsigned char[win_width * win_height * 3];
-		glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		if (export_to_opencv){
+			unsigned char* buffer = new unsigned char[win_width * win_height * 3];
+			glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
 
-		cv::Mat image(win_height, win_width, CV_8UC3, buffer);
-		flip(image, image, 0);
-		cvtColor(image, image, CV_RGB2BGR);
-		cv::imshow("OpenCV", image);
-		cv::waitKey(5);
-
+			cv::Mat image(win_height, win_width, CV_8UC3, buffer);
+			flip(image, image, 0);
+			cvtColor(image, image, CV_RGB2BGR);
+			cv::imshow("OpenCV", image);
+			cv::waitKey(5);
+		}
 	} // Check if the ESC key was pressed or the window was closed
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 	       glfwWindowShouldClose(window) == 0 );
