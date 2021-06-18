@@ -361,15 +361,17 @@ public:
 		ModelMatrix = glm::scale(ModelMatrix, scale);
 
 		// rotate model
-		auto angle_in_radians = float(calc_turn_angle(prev_pos, curr_pos));
-		ModelMatrix = glm::rotate(ModelMatrix, angle_in_radians, glm::vec3 (0, 1, 0)); // where x, y, z is axis of rotation (e.g. 0 1 0)
+		glm::vec3 n = glm::normalize(curr_pos - prev_pos);
+//
+
+		ModelMatrix = glm::rotate(ModelMatrix, float(calc_angle({0, 0, 1}, n)), calc_axis({0, 0, 1}, n)); // where x, y, z is axis of rotation (e.g. 0 1 0)
 
 		// translate model
 		glm::mat4 TranslationMatrix = translate(mat4(), curr_pos);
 		ModelMatrix = TranslationMatrix * ModelMatrix;
 
 		// translate orbit
-		ModelMatrix = translate(mat4(), glm::vec3(0, 3, 0)) * ModelMatrix;
+//		ModelMatrix = translate(mat4(), glm::vec3(0, 3, 0)) * ModelMatrix;
 
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 		//		// Send our transformation to the currently bound shader,
