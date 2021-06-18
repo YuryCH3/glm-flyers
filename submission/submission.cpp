@@ -178,12 +178,7 @@ public:
 //
 //		// render the grid:
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-//
-
-
-
 		glEnable(GL_DEPTH_TEST);
-//
 		glBindVertexArray(vao);
 
 		// 2nd attribute buffer : colors
@@ -200,7 +195,6 @@ public:
 
 		glDrawElements(GL_LINES, lenght, GL_UNSIGNED_INT, NULL);
 		glBindVertexArray(0);
-//////
 		glDisable(GL_DEPTH_TEST);
 	}
 
@@ -704,4 +698,3 @@ int main(void)
 
 	return 0;
 }
-
