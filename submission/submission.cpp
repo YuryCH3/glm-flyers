@@ -26,6 +26,8 @@ using namespace glm;
 #include <iostream>
 #include <chrono>
 
+#include <opencv2/opencv.hpp>
+
 
 std::ostream& operator << (std::ostream& os, const glm::uvec4 & v){
 	os << v.x << " " << v.y << " " << v.z << " " << v.w;
@@ -619,7 +621,11 @@ int main(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow( 1024, 768, "Tutorial 0 - Keyboard and Mouse", nullptr, nullptr);
+
+	int win_width = 1024;
+	int win_height = 768;
+
+	window = glfwCreateWindow( win_width, win_height, "OpenGL", nullptr, nullptr);
 	if(window == nullptr){
 		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
 		getchar();
@@ -679,6 +685,15 @@ int main(void)
 		// Swap buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		unsigned char* buffer = new unsigned char[win_width * win_height * 3];
+		glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+
+		cv::Mat image(win_height, win_width, CV_8UC3, buffer);
+		flip(image, image, 0);
+		cvtColor(image, image, CV_RGB2BGR);
+		cv::imshow("OpenCV", image);
+		cv::waitKey(5);
 
 	} // Check if the ESC key was pressed or the window was closed
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
