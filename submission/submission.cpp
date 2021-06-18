@@ -239,21 +239,21 @@ public:
 		// 4 * 3 indices
 
 		static const GLfloat g_vertex_buffer_data[] {
-				0.f, 0.f, 0.f,
-				-1.f, 0.f, -2.f,
-				1.f, 0.f, -2.f,
+				0.f, 0.f, 1.f,
+				-1.f, 0.f, -1.f,
+				1.f, 0.f, -1.f,
 
-				0.f, 0.f, 0.f,
-				-1.f, 1.f, -2.f,
-				1.f, 1.f, -2.f,
+				0.f, 0.f, 1.f,
+				-1.f, 1.f, -1.f,
+				1.f, 1.f, -1.f,
 
-				0.f, 0.f, 0.f,
-				-1.f, 0.f, -2.f,
-				-1.f, 1.f, -2.f,
+				0.f, 0.f, 1.f,
+				-1.f, 0.f, -1.f,
+				-1.f, 1.f, -1.f,
 
-				0.f, 0.f, 0.f,
-				1.f, 0.f, -2.f,
-				1.f, 1.f, -2.f,
+				0.f, 0.f, 1.f,
+				1.f, 0.f, -1.f,
+				1.f, 1.f, -1.f,
 		};
 
 		const GLfloat g_color_buffer_data[] = {
@@ -362,16 +362,15 @@ public:
 
 		// rotate model
 		glm::vec3 n = glm::normalize(curr_pos - prev_pos);
-//
+		glm::vec3 n_xz = glm::vec3{n.x, 0, n.z};
 
-		ModelMatrix = glm::rotate(ModelMatrix, float(calc_angle({0, 0, 1}, n)), calc_axis({0, 0, 1}, n)); // where x, y, z is axis of rotation (e.g. 0 1 0)
+		ModelMatrix = glm::rotate(ModelMatrix, float(calc_angle(n_xz, n)), calc_axis(n_xz, n)); // where x, y, z is axis of rotation (e.g. 0 1 0)
+		ModelMatrix = glm::rotate(ModelMatrix, float(calc_angle({0, 0, 1}, n_xz)), calc_axis({0, 0, 1}, n_xz)); // where x, y, z is axis of rotation (e.g. 0 1 0)
 
 		// translate model
 		glm::mat4 TranslationMatrix = translate(mat4(), curr_pos);
-		ModelMatrix = TranslationMatrix * ModelMatrix;
 
-		// translate orbit
-//		ModelMatrix = translate(mat4(), glm::vec3(0, 3, 0)) * ModelMatrix;
+		ModelMatrix = TranslationMatrix * ModelMatrix;
 
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 		//		// Send our transformation to the currently bound shader,
@@ -379,7 +378,6 @@ public:
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 
 		prev_pos = curr_pos;
-
 
 		// 1rst attribute buffer : vertices
 		glEnableVertexAttribArray(0);
