@@ -144,15 +144,8 @@ public:
 		lenght = (GLuint)indices.size() * 4;
 	}
 
-	void draw()
+	void draw(const glm::mat4 & ViewMatrix)
 	{
-		glm::mat4 CameraMatrix = glm::lookAt(
-				glm::vec3(0,1,-1), // the position of your camera, in world space
-				glm::vec3(0,0,0),   // where you want to look at, in world space
-				glm::vec3(0,1,0)        // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
-		);
-
-//		std::cout << "programID " << programID << std::endl;
 		glUseProgram(programID);
 //
 		// Compute the MVP matrix from keyboard and mouse input
@@ -161,7 +154,6 @@ public:
 		double scale_factor = 10;
 
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
-		glm::mat4 ViewMatrix = getViewMatrix();
 
 //			First let's store our scale in a 3d vector:
 		glm::vec3 scale = glm::vec3(scale_factor, scale_factor, scale_factor);
@@ -328,7 +320,7 @@ public:
 		return atan2(dr.x, dr.z);
 	}
 
-	void draw()
+	void draw(const glm::mat4 & ViewMatrix)
 	{
 		// Use our shader
 		glUseProgram(programID);
@@ -347,7 +339,6 @@ public:
 		glm::vec3 curr_pos = calc_position(std::chrono::system_clock::now());
 
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
-		glm::mat4 ViewMatrix = getViewMatrix();
 
 //			Now we need a basic model matrix with no transformations:
 		glm::mat4 ModelMatrix = glm::mat4(1.0);
@@ -669,12 +660,21 @@ int main(void)
 	std::unique_ptr<Ship> ship1 = std::make_unique<Ship>(glm::vec3{1, 0, 0}, 0);
 	std::unique_ptr<Ship> ship2 = std::make_unique<Ship>(glm::vec3{1, 1, 0}, M_PI / 4);
 
+	glm::mat4 CameraMatrix = glm::lookAt(
+			glm::vec3(0,1,-1), // the position of your camera, in world space
+			glm::vec3(0,0,0),   // where you want to look at, in world space
+			glm::vec3(0,1,0)        // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
+	);
+
 	do{
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		grid->draw();
-		ship1->draw();
-		ship2->draw();
+		glm::mat4 ViewMatrix = getViewMatrix();
+
+		grid->draw(ViewMatrix);
+		ship1->draw(ViewMatrix);
+		ship2->draw(ViewMatrix);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
