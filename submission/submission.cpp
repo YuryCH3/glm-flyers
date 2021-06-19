@@ -34,6 +34,22 @@ std::ostream& operator << (std::ostream& os, const glm::uvec4 & v){
 	return os;
 }
 
+std::ostream& operator << (std::ostream& os, const glm::vec3 & v){
+	os << "{ " << v.x << " " << v.y << " " << v.z << " }";
+	return os;
+}
+
+std::ostream& operator << (std::ostream& os, const glm::mat4 & v){
+	for (int i = 0; i < 4; ++i){
+		for (int j = 0; j < 4; ++j){
+			os << v[i][j] << " ";
+		}
+		os << std::endl;
+	}
+	os << std::endl;
+	return os;
+}
+
 class Grid
 {
 	GLuint vao;
@@ -111,8 +127,6 @@ public:
 			}
 		}
 
-
-
 		std::vector<glm::vec3> colors;
 
 		for (int i = 0; i < vertices.size(); ++i){
@@ -146,16 +160,13 @@ public:
 		lenght = (GLuint)indices.size() * 4;
 	}
 
-	void draw(const glm::mat4 & ViewMatrix)
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix)
 	{
 		glUseProgram(programID);
 //
 		// Compute the MVP matrix from keyboard and mouse input
-		computeMatricesFromInputs();
 
 		double scale_factor = 10;
-
-		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 
 //			First let's store our scale in a 3d vector:
 		glm::vec3 scale = glm::vec3(scale_factor, scale_factor, scale_factor);
@@ -218,10 +229,32 @@ class Ship
 	const double delta_theta;
 
 	GLuint colorbuffer;
+	const glm::vec3 color;
+
+	// 4 triangles
+	// 5 unique vertices
+	// 4 * 3 indices
+	const std::vector<glm::vec3> vertices = {
+			{0.f, 0.f, 1.f},
+			{-1.f, 0.f, -1.f},
+			{1.f, 0.f, -1.f},
+
+			{0.f, 0.f, 1.f},
+			{-1.f, 1.f, -1.f},
+			{1.f, 1.f, -1.f},
+
+			{0.f, 0.f, 1.f},
+			{-1.f, 0.f, -1.f},
+			{-1.f, 1.f, -1.f},
+
+			{0.f, 0.f, 1.f},
+			{1.f, 0.f, -1.f},
+			{1.f, 1.f, -1.f},
+	};
 
 public:
 
-	Ship(glm::vec3 color, double delta_theta_) : delta_theta(delta_theta_)
+	Ship(glm::vec3 color_, double delta_theta_) : color(color_), delta_theta(delta_theta_)
 	{
 		programID = LoadShaders(
 			"TransformVertexShader.vertexshader",
@@ -233,28 +266,6 @@ public:
 
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
-
-		// 4 triangles
-		// 5 unique vertices
-		// 4 * 3 indices
-
-		static const GLfloat g_vertex_buffer_data[] {
-				0.f, 0.f, 1.f,
-				-1.f, 0.f, -1.f,
-				1.f, 0.f, -1.f,
-
-				0.f, 0.f, 1.f,
-				-1.f, 1.f, -1.f,
-				1.f, 1.f, -1.f,
-
-				0.f, 0.f, 1.f,
-				-1.f, 0.f, -1.f,
-				-1.f, 1.f, -1.f,
-
-				0.f, 0.f, 1.f,
-				1.f, 0.f, -1.f,
-				1.f, 1.f, -1.f,
-		};
 
 		const GLfloat g_color_buffer_data[] = {
 				color[0], color[1], color[2],
@@ -274,7 +285,6 @@ public:
 				color[0], color[1], color[2],
 		};
 
-
 // This will identify our vertex buffer
 //		GLuint vertexbuffer;
 // Generate 1 buffer, put the resulting identifier in vertexbuffer
@@ -282,7 +292,7 @@ public:
 // The following commands will talk about our 'vertexbuffer' buffer
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 // Give our vertices to OpenGL.
-		glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), glm::value_ptr(vertices[0]), GL_STATIC_DRAW);
 		// Finally calculate the proper number of indices
 
 		glGenBuffers(1, &colorbuffer);
@@ -331,25 +341,11 @@ public:
 		return glm::cross(r1, r2);
 	}
 
-	void draw(const glm::mat4 & ViewMatrix)
-	{
-		// Use our shader
-		glUseProgram(programID);
-
-		// Compute the MVP matrix from keyboard and mouse input
-		computeMatricesFromInputs();
-
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glDisable(GL_DEPTH_TEST);
-
-		glBindVertexArray(vao);
-
-//		double scale_factor = 0.01;
+	glm::mat4 calcMVP(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix){
+		//		double scale_factor = 0.01;
 		double scale_factor = 0.5;
 
 		glm::vec3 curr_pos = calc_position(std::chrono::system_clock::now());
-
-		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 
 //			Now we need a basic model matrix with no transformations:
 		glm::mat4 ModelMatrix = glm::mat4(1.0);
@@ -362,6 +358,8 @@ public:
 
 		// rotate model
 		glm::vec3 n = glm::normalize(curr_pos - prev_pos);
+		prev_pos = curr_pos;
+
 		glm::vec3 n_xz = glm::vec3{n.x, 0, n.z};
 
 		ModelMatrix = glm::rotate(ModelMatrix, float(calc_angle(n_xz, n)), calc_axis(n_xz, n)); // where x, y, z is axis of rotation (e.g. 0 1 0)
@@ -375,10 +373,30 @@ public:
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
 		//		// Send our transformation to the currently bound shader,
 		//		// in the "MVP" uniform
+		return MVP;
+	}
+
+
+
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix)
+	{
+		// Use our shader
+		glUseProgram(programID);
+
+		// Compute the MVP matrix from keyboard and mouse input
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//		glDisable(GL_DEPTH_TEST);
+//		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_DEPTH_TEST);
+
+		glBindVertexArray(vao);
+
+		glm::mat4 MVP = calcMVP(ViewMatrix, ProjectionMatrix);
+		//		// Send our transformation to the currently bound shader,
+		//		// in the "MVP" uniform
+
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-		prev_pos = curr_pos;
-
 		// 1rst attribute buffer : vertices
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
@@ -410,6 +428,44 @@ public:
 		glDisableVertexAttribArray(1);
 	}
 
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame)
+	{
+		glm::mat4 MVP = calcMVP(ViewMatrix, ProjectionMatrix);
+
+		int frame_w = frame.size().width;
+		int frame_h = frame.size().height;
+
+		std::vector<cv::Point> points;
+		for (const glm::vec3 & v3 : vertices){
+			glm::vec4 v4 = {v3.x, v3.y, v3.z, 1};
+			v4 = MVP * v4;
+
+			cv::Point2i p;
+			p.x = v4.x / v4.w * frame_w / 2 + frame_w / 2;
+			p.y = frame_h - (v4.y / v4.w * frame_h / 2 + frame_h / 2);
+			points.push_back(p);
+		}
+
+		cv::Scalar clr{
+			255 * color[2],
+			255 * color[1],
+			255 * color[0]}
+			;
+
+		for (const auto & p : points){
+			cv::circle(frame, p, 2, clr, 2, 1);
+		}
+
+		for (int i = 0; i < points.size(); i += 3){
+			for (int j = 0; j < 3; ++j){
+				auto p1 = points[i + j];
+				auto p2 = points[i + (j + 1) % 3];
+				cv::line(frame, p1, p2, clr,2, 1);
+			}
+		}
+	}
+
+
 	~Ship()
 	{
 		glDeleteBuffers(1, &vertexbuffer);
@@ -417,6 +473,41 @@ public:
 		glDeleteProgram(programID);
 	}
 };
+
+
+mat4 LookAtRH(vec3 eye, vec3 target, vec3 up )
+{
+	vec3 zaxis = glm::normalize(eye - target);    // The "forward" vector.
+	vec3 xaxis = glm::normalize(glm::cross(up, zaxis));// The "right" vector.
+	vec3 yaxis = glm::cross(zaxis, xaxis);     // The "up" vector.
+
+	// Create a 4x4 orientation matrix from the right, up, and forward vectors
+	// This is transposed which is equivalent to performing an inverse
+	// if the matrix is orthonormalized (in this case, it is).
+	mat4 orientation = {
+			vec4( xaxis.x, yaxis.x, zaxis.x, 0 ),
+			vec4( xaxis.y, yaxis.y, zaxis.y, 0 ),
+			vec4( xaxis.z, yaxis.z, zaxis.z, 0 ),
+			vec4(   0,       0,       0,     1 )
+	};
+
+	// Create a 4x4 translation matrix.
+	// The eye position is negated which is equivalent
+	// to the inverse of the translation matrix.
+	// T(v)^-1 == T(-v)
+	mat4 translation = {
+			vec4(   1,      0,      0,   0 ),
+			vec4(   0,      1,      0,   0 ),
+			vec4(   0,      0,      1,   0 ),
+			vec4(-eye.x, -eye.y, -eye.z, 1 )
+	};
+
+	// Combine the orientation and translation to compute
+	// the final view matrix. Note that the order of
+	// multiplication is reversed because the matrices
+	// are already inverted.
+	return orientation * translation;
+}
 
 
 int main(void)
@@ -481,27 +572,53 @@ int main(void)
 	std::unique_ptr<Ship> ship1 = std::make_unique<Ship>(glm::vec3{1, 0, 0}, 0);
 	std::unique_ptr<Ship> ship2 = std::make_unique<Ship>(glm::vec3{1, 1, 0}, M_PI / 4);
 
+	glm::vec3 cameraPosition = glm::vec3(5,10,-10);
+	glm::vec3 cameraTarget = glm::vec3(0,0,0);
+	glm::vec3 cameraUp = glm::vec3(0,1,0);
+
 	glm::mat4 CameraMatrix = glm::lookAt(
-			glm::vec3(0,1,-1), // the position of your camera, in world space
-			glm::vec3(0,0,0),   // where you want to look at, in world space
-			glm::vec3(0,1,0)        // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
+			cameraPosition, // the position of your camera, in world space
+			cameraTarget,  // where you want to look at, in world space
+			cameraUp   // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
 	);
+
+	glm::mat4 ProjectionMatrix = glm::perspective(
+			glm::radians(45.f), // The vertical Field of View, in radians: the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
+			(GLfloat)win_width / (GLfloat)win_height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
+			1.0f, // Near clipping plane. Keep as big as possible, or you'll get precision issues.
+			150.0f // Far clipping plane. Keep as little as possible.
+	);
+
+	glm::mat4 ViewMatrix = LookAtRH(cameraPosition, cameraTarget, cameraUp);
 
 	bool export_to_opencv = false;
 
 	do{
-
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glm::mat4 ViewMatrix = getViewMatrix();
+		computeMatricesFromInputs();
 
-		grid->draw(ViewMatrix);
-		ship1->draw(ViewMatrix);
-		ship2->draw(ViewMatrix);
+//		glm::mat4 ProjectionMatrix = getProjectionMatrix();
+
+		grid->draw(ViewMatrix, ProjectionMatrix);
+		ship1->draw(ViewMatrix, ProjectionMatrix);
+		ship2->draw(ViewMatrix, ProjectionMatrix);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		bool render_in_opencv = true;
+		if (render_in_opencv){
+			cv::Mat image(win_height, win_width, CV_8UC3, {20, 0, 0});
+
+			ship1->draw(ViewMatrix, ProjectionMatrix, image);
+			ship2->draw(ViewMatrix, ProjectionMatrix, image);
+
+			cv::imshow("OpenCV", image);
+			cv::waitKey(5);
+		}
+
 
 		if (export_to_opencv){
 			unsigned char* buffer = new unsigned char[win_width * win_height * 3];
