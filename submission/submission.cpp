@@ -62,11 +62,14 @@ class Grid
 	GLuint programID;
 	GLuint MatrixID;
 
-	const bool horizontal;
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::uvec4> indices;
+
+	glm::vec3 color = {0, 1, 0};
 
 public:
 
-	Grid(bool horizontal_ = true) : horizontal(horizontal_)
+	Grid()
 	{
 		programID = LoadShaders(
 				"TransformVertexShader.vertexshader",
@@ -79,30 +82,14 @@ public:
 		glGenVertexArrays(1, &vao);
 		glBindVertexArray(vao);
 
-
-		std::vector<glm::vec3> vertices;
-		std::vector<glm::uvec4> indices;
-
-		if (horizontal){
-			for(int j = 0; j <= slices; ++j) {
-				for(int i = 0; i <= slices; ++i) {
-					float x = (float) i / (float) slices;
-					float y = 0;
-					float z = (float) j / (float) slices;
-					vertices.push_back(glm::vec3(x, y, z));
-				}
-			}
-		} else {
-			for(int j = 0; j <= slices; ++j) {
-				for(int i = 0; i <= slices; ++i) {
-					float x = (float) i / (float) slices;
-					float y = (float) j / (float) slices;
-					float z = 0;
-					vertices.push_back(glm::vec3(x, y, z));
-				}
+		for(int j = 0; j <= slices; ++j) {
+			for(int i = 0; i <= slices; ++i) {
+				float x = (float) i / (float) slices;
+				float y = 0;
+				float z = (float) j / (float) slices;
+				vertices.push_back(glm::vec3(x, y, z));
 			}
 		}
-
 
 		// Add the line segments
 		for(int j = 0; j < slices; ++j) {
@@ -130,7 +117,7 @@ public:
 		std::vector<glm::vec3> colors;
 
 		for (int i = 0; i < vertices.size(); ++i){
-			colors.push_back(glm::vec3(0, 1, 0));
+			colors.push_back(color);
 		}
 
 		glGenBuffers(1, &colorbuffer);
@@ -160,12 +147,8 @@ public:
 		lenght = (GLuint)indices.size() * 4;
 	}
 
-	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix)
+	glm::mat4 calc_MVP(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix)
 	{
-		glUseProgram(programID);
-//
-		// Compute the MVP matrix from keyboard and mouse input
-
 		double scale_factor = 10;
 
 //			First let's store our scale in a 3d vector:
@@ -181,8 +164,16 @@ public:
 //			Now we can apply the scale to our model matrix:
 		ModelMatrix = glm::scale(ModelMatrix, scale);
 
+		return ProjectionMatrix * ViewMatrix * ModelMatrix;
+	}
 
-		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix)
+	{
+		glUseProgram(programID);
+//
+		// Compute the MVP matrix from keyboard and mouse input
+		auto MVP = calc_MVP(ViewMatrix, ProjectionMatrix);
+
 		//		// Send our transformation to the currently bound shader,
 		//		// in the "MVP" uniform
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
@@ -207,6 +198,45 @@ public:
 		glDrawElements(GL_LINES, lenght, GL_UNSIGNED_INT, NULL);
 		glBindVertexArray(0);
 		glDisable(GL_DEPTH_TEST);
+	}
+
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame)
+	{
+		glm::mat4 MVP = calc_MVP(ViewMatrix, ProjectionMatrix);
+
+		int frame_w = frame.size().width;
+		int frame_h = frame.size().height;
+
+		std::vector<cv::Point> points;
+		for (const glm::vec3 & v3 : vertices){
+			glm::vec4 v4 = {v3.x, v3.y, v3.z, 1};
+			v4 = MVP * v4;
+
+			cv::Point2i p;
+			p.x = v4.x / v4.w * frame_w / 2 + frame_w / 2;
+			p.y = frame_h - (v4.y / v4.w * frame_h / 2 + frame_h / 2);
+			points.push_back(p);
+		}
+
+		cv::Scalar clr{
+				255 * color[2],
+				255 * color[1],
+				255 * color[0]}
+		;
+
+		for (const auto & p : points){
+			cv::circle(frame, p, 2, clr, 2, 1);
+		}
+
+		for (int i = 0; i < indices.size(); i += 1){
+			for (int j = 0; j < 3; ++j){
+				int indx1 = indices[i][j];
+				int indx2 = indices[i][(j + 1) % 4];
+				auto p1 = points[indx1];
+				auto p2 = points[indx2];
+				cv::line(frame, p1, p2, clr,2, 1);
+			}
+		}
 	}
 
 	~Grid()
@@ -612,6 +642,7 @@ int main(void)
 		if (render_in_opencv){
 			cv::Mat image(win_height, win_width, CV_8UC3, {20, 0, 0});
 
+			grid->draw(ViewMatrix, ProjectionMatrix, image);
 			ship1->draw(ViewMatrix, ProjectionMatrix, image);
 			ship2->draw(ViewMatrix, ProjectionMatrix, image);
 
