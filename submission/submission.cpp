@@ -596,7 +596,6 @@ int main(void)
 	// Accept fragment if it closer to the camera than the former one
 	glDepthFunc(GL_LESS);
 
-	// Cull triangles which normal is not towards the camera
 
 	std::unique_ptr<Grid> grid = std::make_unique<Grid>();
 	std::unique_ptr<Ship> ship1 = std::make_unique<Ship>(glm::vec3{1, 0, 0}, 0);
@@ -650,7 +649,6 @@ int main(void)
 			cv::waitKey(5);
 		}
 
-
 		if (export_to_opencv){
 			unsigned char* buffer = new unsigned char[win_width * win_height * 3];
 			glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
@@ -661,6 +659,7 @@ int main(void)
 			cv::imshow("OpenCV", image);
 			cv::waitKey(5);
 		}
+
 	} // Check if the ESC key was pressed or the window was closed
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 	       glfwWindowShouldClose(window) == 0 );
