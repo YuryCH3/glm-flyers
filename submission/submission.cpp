@@ -605,7 +605,9 @@ int main(void)
 	glm::vec3 cameraTarget = glm::vec3(0,0,0);
 	glm::vec3 cameraUp = glm::vec3(0,1,0);
 
-	glm::mat4 CameraMatrix = glm::lookAt(
+//	glm::mat4 ViewMatrix = LookAtRH(cameraPosition, cameraTarget, cameraUp);
+
+	glm::mat4 ViewMatrix = glm::lookAt(
 			cameraPosition, // the position of your camera, in world space
 			cameraTarget,  // where you want to look at, in world space
 			cameraUp   // probably glm::vec3(0,1,0), but (0,-1,0) would make you looking upside-down, which can be great too
@@ -618,16 +620,18 @@ int main(void)
 			150.0f // Far clipping plane. Keep as little as possible.
 	);
 
-	glm::mat4 ViewMatrix = LookAtRH(cameraPosition, cameraTarget, cameraUp);
-
 	bool export_to_opencv = false;
+//	bool fixed_camera = true;
+	bool fixed_camera = false;
 
 	do{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		computeMatricesFromInputs();
-
-//		glm::mat4 ProjectionMatrix = getProjectionMatrix();
+		if (not fixed_camera){
+			computeMatricesFromInputs();
+			ViewMatrix = getViewMatrix();
+			ProjectionMatrix = getProjectionMatrix();
+		}
 
 		grid->draw(ViewMatrix, ProjectionMatrix);
 		ship1->draw(ViewMatrix, ProjectionMatrix);
