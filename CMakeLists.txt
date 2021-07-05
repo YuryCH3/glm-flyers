@@ -168,6 +168,30 @@ target_link_libraries(tutorial06_keyboard_and_mouse
 set_target_properties(tutorial06_keyboard_and_mouse PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tutorial06_keyboard_and_mouse/")
 create_target_launcher(tutorial06_keyboard_and_mouse WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tutorial06_keyboard_and_mouse/")
 
+# Submission
+add_executable(submission
+		submission/submission.cpp
+		common/shader.cpp
+		common/shader.hpp
+		common/controls.cpp
+		common/controls.hpp
+		common/texture.cpp
+		common/texture.hpp
+
+		submission/TransformVertexShader.vertexshader
+		submission/TextureFragmentShader.fragmentshader
+		)
+target_link_libraries(submission
+		${ALL_LIBS}
+		${OpenCV_LIBS}
+		${CMAKE_THREAD_LIBS_INIT}
+		${RT_LIBS}
+		)
+# Xcode and Visual working directories
+set_target_properties(submission PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/submission/")
+create_target_launcher(submission WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/submission/")
+
+
 # Tutorial 7
 add_executable(tutorial07_model_loading
 	tutorial07_model_loading/tutorial07.cpp
