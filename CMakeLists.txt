@@ -22,6 +22,13 @@ if( CMAKE_BINARY_DIR MATCHES " " )
 endif()
 
 
+find_package(OpenCV 3 QUIET)
+if (${OpenCV_FOUND})
+	include_directories(${OpenCV_INCLUDE_DIRS})
+	add_definitions(-DHAVE_OPENCV)
+	message(STATUS "OpenCV: found ${OpenCV_VERSION}")
+endif()
+
 
 # Compile external dependencies 
 add_subdirectory (external)
