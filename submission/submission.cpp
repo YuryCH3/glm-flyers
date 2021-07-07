@@ -161,7 +161,7 @@ public:
 
 		ModelMatrix = TranslationMatrix * ModelMatrix;
 
-//			Now we can apply the scale to our model matrix:
+//		Now we can apply the scale to our model matrix:
 		ModelMatrix = glm::scale(ModelMatrix, scale);
 
 		return ProjectionMatrix * ViewMatrix * ModelMatrix;
@@ -200,42 +200,114 @@ public:
 		glDisable(GL_DEPTH_TEST);
 	}
 
+	void fix_border_line(cv::Point2d & p1, cv::Point2d & p2, const cv::Size size){
+		// (y - y1) / (y2 - y1) = (x - x1) / (x2 - x1)
+		// y - y1 = (x - x1) * (y2 - y1) / (x2 - x1)
+		// y = (x - x1) * (y2 - y1) / (x2 - x1) + y1
+		// x = (y - y1) * (x2 - x1) / (y2 - y1) + x1
+
+		double x1 = p1.x;
+		double y1 = p1.y;
+		double x2 = p2.x;
+		double y2 = p2.y;
+
+		auto fix = [](double & x, double & y, double x1, double y1, double x2, double y2, double upper_limit){
+			if (x < 0){
+				x = 0;
+				y = (x - x1) * (y2 - y1) / (x2 - x1) + y1;
+			} else if (x > upper_limit){
+				x = upper_limit;
+				y = (x - x1) * (y2 - y1) / (x2 - x1) + y1;
+			}
+		};
+
+		fix(p1.x, p1.y, x1, y1, x2, y2, size.width);
+		fix(p1.y, p1.x, y1, x1, y2, x2, size.height);
+
+		fix(p2.x, p2.y, x2, y2, x1, y1, size.width);
+		fix(p2.y, p2.x, y2, x2, y1, x1, size.height);
+
+	}
+
 	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame)
 	{
-		glm::mat4 MVP = calc_MVP(ViewMatrix, ProjectionMatrix);
+		const glm::mat4 MVP = calc_MVP(ViewMatrix, ProjectionMatrix);
 
-		int frame_w = frame.size().width;
-		int frame_h = frame.size().height;
+		const cv::Size size = frame.size();
+		const int frame_w = size.width;
+		const int frame_h = size.height;
 
-		std::vector<cv::Point> points;
+		std::vector<cv::Point2d> points;
+		std::vector<bool> visible;
+
 		for (const glm::vec3 & v3 : vertices){
 			glm::vec4 v4 = {v3.x, v3.y, v3.z, 1};
 			v4 = MVP * v4;
+			cv::Point2d p;
 
-			cv::Point2i p;
 			p.x = v4.x / v4.w * frame_w / 2 + frame_w / 2;
 			p.y = frame_h - (v4.y / v4.w * frame_h / 2 + frame_h / 2);
+
+			visible.push_back(v4.w > 0);
+
+
+
 			points.push_back(p);
 		}
 
-		cv::Scalar clr{
-				255 * color[2],
-				255 * color[1],
-				255 * color[0]}
-		;
+		const cv::Scalar clr{
+			255 * color[2],
+			255 * color[1],
+			255 * color[0]
+		};
 
-		for (const auto & p : points){
-			cv::circle(frame, p, 2, clr, 2, 1);
-		}
+		const cv::Rect2d win_rect({0, 0}, cv::Point(size));
 
 		for (int i = 0; i < indices.size(); i += 1){
 			for (int j = 0; j < 3; ++j){
 				int indx1 = indices[i][j];
 				int indx2 = indices[i][(j + 1) % 4];
-				auto p1 = points[indx1];
-				auto p2 = points[indx2];
-				cv::line(frame, p1, p2, clr,2, 1);
+
+				if (!visible[indx1] and !visible[indx2])
+					continue;
+
+				cv::Point2d p1 = points[indx1];
+				cv::Point2d p2 = points[indx2];
+
+//				if (!win_rect.contains(p1) and !win_rect.contains(p2))
+//					continue;
+
+//				fix_border_line(p1, p2, frame.size());
+//
+//				if ((abs(p1.x) <= frame_w / 2 or abs(p1.y) <= frame_h / 2)
+//				    and (abs(p2.x) <= frame_w / 2 or abs(p2.y) <= frame_h / 2))
+
+				if (visible[indx1] and visible[indx2])
+				{
+					cv::line(frame, p1, p2, clr, 2, 1);
+				} else if (visible[indx1]){
+//					std::cout << p2 << std::endl;
+//					p2 = p1 - (p2 - p1);
+//					cv::Point2d c(size.width / 2, size.height / 2);
+//					fix_border_line(p1, p2, size);
+//					p2 = p1 - (p1 - p2);
+//					cv::line(frame, p1, p2, clr, 2, 1);
+				} else if (visible[indx2]){
+					std::cout << p1 << std::endl;
+//					cv::Point2d c(size.width / 2, size.height / 2);
+//					p1 = p2 - (c - p2);
+//					fix_border_line(p1, p2, size);
+//					p1 = p2 - (p2 - p1);
+//					cv::line(frame, p1, p2, clr, 2, 1);
+				}
 			}
+		}
+
+		for (int i = 0; i < points.size(); ++i){
+			const auto & p = points[i];
+			if (visible[i])
+				if (win_rect.contains(p))
+					cv::circle(frame, p, 2, {255, 0, 0}, 2, 1);
 		}
 	}
 
@@ -462,10 +534,14 @@ public:
 	{
 		glm::mat4 MVP = calcMVP(ViewMatrix, ProjectionMatrix);
 
-		int frame_w = frame.size().width;
-		int frame_h = frame.size().height;
+		cv::Size size = frame.size();
+		int frame_w = size.width;
+		int frame_h = size.height;
 
 		std::vector<cv::Point> points;
+		std::vector<bool> visible;
+
+
 		for (const glm::vec3 & v3 : vertices){
 			glm::vec4 v4 = {v3.x, v3.y, v3.z, 1};
 			v4 = MVP * v4;
@@ -474,6 +550,7 @@ public:
 			p.x = v4.x / v4.w * frame_w / 2 + frame_w / 2;
 			p.y = frame_h - (v4.y / v4.w * frame_h / 2 + frame_h / 2);
 			points.push_back(p);
+			visible.push_back(v4.w > 0);
 		}
 
 		cv::Scalar clr{
@@ -482,16 +559,26 @@ public:
 			255 * color[0]}
 			;
 
-		for (const auto & p : points){
-			cv::circle(frame, p, 2, clr, 2, 1);
-		}
+		const cv::Rect2d win_rect({0, 0}, cv::Point(size));
 
 		for (int i = 0; i < points.size(); i += 3){
 			for (int j = 0; j < 3; ++j){
-				auto p1 = points[i + j];
-				auto p2 = points[i + (j + 1) % 3];
+				int idx1 = i + j;
+				int idx2 = i + (j + 1) % 3;
+
+				if (!visible[idx1] or !visible[idx2])
+					continue;
+
+				auto p1 = points[idx1];
+				auto p2 = points[idx2];
+
 				cv::line(frame, p1, p2, clr,2, 1);
 			}
+		}
+
+		for (int i = 0; i < points.size(); ++i){
+			if (visible[i])
+				cv::circle(frame, points[i], 2, {255, 0, 0}, 2, 1);
 		}
 	}
 
@@ -632,6 +719,12 @@ int main(void)
 			ViewMatrix = getViewMatrix();
 			ProjectionMatrix = getProjectionMatrix();
 		}
+
+//		if (PrevViewMatrix == ViewMatrix){
+//			continue;
+//		} else {
+//			PrevViewMatrix = ViewMatrix;
+//		}
 
 		grid->draw(ViewMatrix, ProjectionMatrix);
 		ship1->draw(ViewMatrix, ProjectionMatrix);
