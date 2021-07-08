@@ -50,7 +50,16 @@ std::ostream& operator << (std::ostream& os, const glm::mat4 & v){
 	return os;
 }
 
-class Grid
+class Drawable
+{
+public:
+	virtual void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix) = 0;
+	virtual void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame) = 0;
+
+	virtual ~Drawable(){}
+};
+
+class Grid : public Drawable
 {
 	GLuint vao;
 	GLuint vbo;
@@ -167,7 +176,7 @@ public:
 		return ProjectionMatrix * ViewMatrix * ModelMatrix;
 	}
 
-	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix)
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix) override
 	{
 		glUseProgram(programID);
 //
@@ -229,7 +238,7 @@ public:
 
 	}
 
-	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame)
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame) override
 	{
 		const glm::mat4 MVP = calc_MVP(ViewMatrix, ProjectionMatrix);
 
@@ -249,9 +258,6 @@ public:
 			p.y = frame_h - (v4.y / v4.w * frame_h / 2 + frame_h / 2);
 
 			visible.push_back(v4.w > 0);
-
-
-
 			points.push_back(p);
 		}
 
@@ -274,30 +280,12 @@ public:
 				cv::Point2d p1 = points[indx1];
 				cv::Point2d p2 = points[indx2];
 
-//				if (!win_rect.contains(p1) and !win_rect.contains(p2))
-//					continue;
-
-//				fix_border_line(p1, p2, frame.size());
-//
-//				if ((abs(p1.x) <= frame_w / 2 or abs(p1.y) <= frame_h / 2)
-//				    and (abs(p2.x) <= frame_w / 2 or abs(p2.y) <= frame_h / 2))
-
 				if (visible[indx1] and visible[indx2])
 				{
 					cv::line(frame, p1, p2, clr, 2, 1);
 				} else if (visible[indx1]){
-//					std::cout << p2 << std::endl;
-//					p2 = p1 - (p2 - p1);
-//					cv::Point2d c(size.width / 2, size.height / 2);
-//					fix_border_line(p1, p2, size);
-//					p2 = p1 - (p1 - p2);
 //					cv::line(frame, p1, p2, clr, 2, 1);
 				} else if (visible[indx2]){
-					std::cout << p1 << std::endl;
-//					cv::Point2d c(size.width / 2, size.height / 2);
-//					p1 = p2 - (c - p2);
-//					fix_border_line(p1, p2, size);
-//					p1 = p2 - (p2 - p1);
 //					cv::line(frame, p1, p2, clr, 2, 1);
 				}
 			}
@@ -311,7 +299,7 @@ public:
 		}
 	}
 
-	~Grid()
+	virtual ~Grid()
 	{
 		glDeleteBuffers(1, &vbo);
 		glDeleteBuffers(1, &ibo);
@@ -320,7 +308,7 @@ public:
 	}
 };
 
-class Ship
+class Ship : public Drawable
 {
 	GLuint vao;
 	GLuint vertexbuffer;
@@ -480,7 +468,7 @@ public:
 
 
 
-	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix)
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix) override
 	{
 		// Use our shader
 		glUseProgram(programID);
@@ -530,7 +518,7 @@ public:
 		glDisableVertexAttribArray(1);
 	}
 
-	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame)
+	void draw(const glm::mat4 & ViewMatrix, const glm::mat4 & ProjectionMatrix, cv::Mat & frame) override
 	{
 		glm::mat4 MVP = calcMVP(ViewMatrix, ProjectionMatrix);
 
@@ -583,7 +571,7 @@ public:
 	}
 
 
-	~Ship()
+	virtual ~Ship()
 	{
 		glDeleteBuffers(1, &vertexbuffer);
 		glDeleteVertexArrays(1, &vao);
@@ -683,10 +671,10 @@ int main(void)
 	// Accept fragment if it closer to the camera than the former one
 	glDepthFunc(GL_LESS);
 
-
-	std::unique_ptr<Grid> grid = std::make_unique<Grid>();
-	std::unique_ptr<Ship> ship1 = std::make_unique<Ship>(glm::vec3{1, 0, 0}, 0);
-	std::unique_ptr<Ship> ship2 = std::make_unique<Ship>(glm::vec3{1, 1, 0}, M_PI / 4);
+	std::vector<std::unique_ptr<Drawable>> objects;
+	objects.emplace_back(new Grid());
+	objects.emplace_back(new Ship(glm::vec3{1, 0, 0}, 0));
+	objects.emplace_back(new Ship(glm::vec3{1, 1, 0}, M_PI / 4));
 
 	glm::vec3 cameraPosition = glm::vec3(5,10,-10);
 	glm::vec3 cameraTarget = glm::vec3(0,0,0);
@@ -726,9 +714,8 @@ int main(void)
 //			PrevViewMatrix = ViewMatrix;
 //		}
 
-		grid->draw(ViewMatrix, ProjectionMatrix);
-		ship1->draw(ViewMatrix, ProjectionMatrix);
-		ship2->draw(ViewMatrix, ProjectionMatrix);
+		for (auto & op : objects)
+			op->draw(ViewMatrix, ProjectionMatrix);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -738,9 +725,8 @@ int main(void)
 		if (render_in_opencv){
 			cv::Mat image(win_height, win_width, CV_8UC3, {20, 0, 0});
 
-			grid->draw(ViewMatrix, ProjectionMatrix, image);
-			ship1->draw(ViewMatrix, ProjectionMatrix, image);
-			ship2->draw(ViewMatrix, ProjectionMatrix, image);
+			for (auto & op : objects)
+				op->draw(ViewMatrix, ProjectionMatrix, image);
 
 			cv::imshow("OpenCV", image);
 			cv::waitKey(5);
